@@ -1,24 +1,28 @@
 from os.path import join, exists, isdir
 from tqdm import tqdm
-import os
 import shutil
 import zipfile
 import pandas as pd
 from os import remove
 import missingno as msno
 import matplotlib.pyplot as plt
+from os import listdir
 
-def keggle_data_preprocessing():
-    base_path = 'datasets/kaggle_smart_meters_london/'
+def keggle_data_formatting():
+    base_path = 'datasets/london/'
     zip_filepath = join(base_path,'archive.zip')
 
     block_list = ['block_{}.csv'.format(i) for i in range(111)]
-    csv_list = block_list + ['weather_hourly_darksky.csv']
     # unzip all the files from data path which are in csv_list
     with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
-        for filename in tqdm(csv_list):
+        for filename in tqdm(block_list):
             with zip_ref.open(join('halfhourly_dataset/halfhourly_dataset/', filename)) as zf, open(join(base_path, filename), 'wb') as f:
                 shutil.copyfileobj(zf, f)
+
+    filename = 'weather_hourly_darksky.csv'
+    with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
+        with zip_ref.open(filename) as zf, open(join(base_path, filename), 'wb') as f:
+            shutil.copyfileobj(zf, f)
 
 
 
@@ -36,18 +40,51 @@ def keggle_data_preprocessing():
         df_list.append(df)
         if len(df_list) == files_per_split:
             df = pd.concat(df_list, axis=0)
-            df.to_pickle(join(base_path, 'data_{}.zip'.format(k)))
-
             df_matrix = df.reset_index().pivot(index='tstp', columns='LCLid', values='energy(kWh/hh)')
-            df_matrix = df_matrix[df_matrix.isna().sum().sort_values().index]
-            df_matrix = pd.concat([df_matrix, weather.loc[(weather.index>=df_matrix.index[0]) & (weather.index<=df_matrix.index[-1])]], axis=1)
-            msno.matrix(df_matrix, freq='10D', fontsize=6)
+            msno.matrix(df_matrix[df_matrix.isna().sum().sort_values().index], freq='10D', fontsize=6)
             plt.savefig(join(base_path, 'missing_data_{}.png'.format(k)))
             df_matrix.to_pickle(join(base_path, 'data_matrix_{}.zip'.format(k)))
             df_list = []
             k += 1
 
     # delete all the csv files in csv_list
-    for filename in tqdm(csv_list):
+    for filename in tqdm(block_list):
         remove(join(base_path, filename))
 
+    # put everything in a single zip file
+    matrices = []
+    for f in tqdm(range(n_splits)):
+        filename = 'data_matrix_{}.zip'.format(f)
+        matrices.append(pd.read_pickle(join(base_path, filename)))
+    df_matrix = pd.concat(matrices, axis=1)
+
+    # filter out periods with few meters
+    presence_ratio = (~df_matrix.isna()).sum(axis=1)/df_matrix.shape[1]
+    presence_ratio.plot()
+    plt.show()
+    # keep only the periods with more than 80% of the meters
+    df_matrix = df_matrix.loc[presence_ratio > 0.8]
+    presence_ratio = (~df_matrix.isna()).sum(axis=1)/df_matrix.shape[1]
+    presence_ratio.plot()
+    plt.show()
+
+    # filter out meters with too many missing values
+    nan_ratio =  df_matrix.isna().sum().sort_values()/df_matrix.shape[0]
+    (nan_ratio.cumsum()/nan_ratio.sum()).plot()
+    plt.show()
+    # keep only the meters with less than 5% of missing values
+    df_matrix = df_matrix.loc[:, nan_ratio < 0.01]
+
+    df_matrix = pd.concat(
+        {'power':df_matrix, 'weather': weather.loc[(weather.index >= df_matrix.index[0]) & (weather.index <= df_matrix.index[-1])]},
+        axis=1)
+
+    df_matrix.to_pickle(join(base_path, 'data_matrix.zip'))
+
+    # delete all the zip files
+    for k in tqdm(range(n_splits)):
+        remove(join(base_path, 'data_matrix_{}.zip'.format(k)))
+
+
+if __name__ == '__main__':
+    keggle_data_formatting()

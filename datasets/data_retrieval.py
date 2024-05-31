@@ -9,16 +9,19 @@
 from os.path import join, exists
 from os import mkdir
 from urllib.request import urlretrieve
-import requests
 from zipfile import ZipFile
 from os import listdir
 import os
+import pandas as pd
+from datasets.kaggle_formatter import keggle_data_formatting
+from datasets.issda_formatter import ireland_data_formatting
 
 from urllib.parse import urlparse
 
+# ---------------------------------- Download the Portugal and Rolle datasets ----------------------------------------
 
-urls = {'electricity_hourly': 'https://zenodo.org/records/4656140/files/electricity_hourly_dataset.zip?download=1',
-        'rolle': 'https://zenodo.org/records/3463137/files/power_data.p?download=1'}
+urls = {'portugal': 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/electricity/electricity.txt.gz?raw=true',
+        'rolle': 'https://zenodo.org/records/4549296/files/power_data.p?download=1'}
 
 for name, url in urls.items():
     # make a directory with the name of the dataset, if not there
@@ -42,4 +45,44 @@ for name, url in urls.items():
             with ZipFile(join(data_dir, file), 'r') as zipObj:
                 zipObj.extractall(data_dir)
     print('Done!')
+
+
+
+
+# ---------------------------------- Format Portugal dataset ----------------------------------------
+
+default_freq = '1h'
+start_date = '01-01-2012 00:00'
+raw_file_names='portugal.gz'
+base_path = 'datasets/portugal/'
+df = pd.read_csv(join(base_path, raw_file_names),
+                 index_col=False,
+                 header=None,
+                 sep=',',
+                 compression='gzip')
+index = pd.date_range(start=start_date,
+                      periods=len(df),
+                      freq=default_freq)
+df = df.set_index(index)
+
+df.to_pickle(join(base_path, 'portugal.pk'))
+
+
+# ---------------------------------- Format London dataset ----------------------------------------
+keggle_data_formatting()
+
+# ---------------------------------- Format Ireland dataset ----------------------------------------
+ireland_data_formatting()
+
+
+# ---------------------------------- Save just the power time series for all the datasets -----------------------------
+
+data_paths = {'portugal':'datasets/portugal/portugal.pk',
+              'rolle':'datasets/rolle/rolle.p',
+              'london':'datasets/london/data_matrix.zip'}
+
+
+pd.read_pickle(data_paths['portugal']).ffill().bfill().to_pickle('datasets/portugal/power.pk')
+pd.read_pickle(data_paths['rolle'])['P_mean'].ffill().bfill().to_pickle('datasets/rolle/power.pk')
+pd.read_pickle(data_paths['london'])['power'].ffill().bfill().to_pickle('datasets/london/power.pk')
 

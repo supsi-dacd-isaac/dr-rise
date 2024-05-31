@@ -1,0 +1,36 @@
+{"forecasters_kwargs": {
+  "ffnn": {
+    "n_epochs":60,
+    "stats_step": 50,
+    "rel_tol":-1e-1,
+    "learning_rate":5e-3,
+    "batch_size":2000,
+    "val_ratio":0.2,
+    "n_layers": 3,
+    "n_out": null,
+    "n_hidden_x": null,
+    "stopping_rounds":10
+  },
+  "cinn": {
+    "n_epochs":60,
+    "stats_step": 50,
+    "rel_tol":-1e-1,
+    "learning_rate":5e-3,
+    "batch_size":2000,
+    "val_ratio":0.2,
+    "n_layers": 3,
+    "n_prediction_layers":3,
+    "n_hidden_x": null,
+    "n_hidden_y":200,
+    "n_out": null,
+    "unnormalized_inputs":null,
+    "normalize_target":false,
+    "stopping_rounds":10,
+    "subtract_mean_when_normalizing":false,
+    "causal_df":null,
+    "probabilistic":false,
+    "end_to_end":"quasi"
+  }
+}
+
+}
