@@ -112,7 +112,7 @@ if __name__ == '__main__':
     data = get_data(pars)
 
     now = pd.Timestamp.now()
-    data.to_pickle('datasets/ev_occupancy_{}.pk'.format(now.strftime('%Y-%m-%d, %H-%M-%S')))
+    data.to_pickle('datasets/ev_occupancy_{}.zip'.format(now.strftime('%Y-%m-%d, %H-%M-%S')))
     pd.DataFrame(pars, index = [0]).to_pickle('datasets/pars_{}.pk'.format(now.strftime('%Y-%m-%d, %H-%M-%S')))
 
     # plot raw data
