@@ -190,7 +190,7 @@ if __name__ == '__main__':
     dt = '15m'
 
 
-    # Download count timeseries for occupancy and availability @ 30 min
+    # Download count timeseries for occupancy and availability @ 15 min
     raw = False
     pars = {'lat_min': lat_min, 'lat_max': lat_max, 'lon_min': lon_min, 'lon_max': lon_max,
                          't_start': t_start, 't_end': t_end, 'dt':dt, 'raw': raw}
