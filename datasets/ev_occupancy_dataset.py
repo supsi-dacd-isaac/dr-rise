@@ -150,9 +150,13 @@ def get_data(pars, save_data=True):
                                  t_start, t_end, dt=pars['dt'], state=1)
         available.rename(columns={'count': 'available'}, inplace=True)
         occupied.rename(columns={'count': 'occupied'}, inplace=True)
-        data = pd.concat([available, occupied['occupied']], axis=1)
+
+
+        data = available.join(occupied.set_index(['time', 'key']), on=['time', 'key'], how='outer')
+
         data[['occupied', 'available']] = data[['occupied', 'available']].fillna(0)
         data[['occupied', 'available']] = data[['occupied', 'available']].astype(int)
+
     if save_data:
         now = pd.Timestamp.now()
         data.to_pickle('datasets/ev_occupancy_{}.zip'.format(now.strftime('%Y-%m-%d--%H-%M-%S')))
@@ -204,3 +208,11 @@ if __name__ == '__main__':
                          't_start': t_start, 't_end': t_end, 'dt':dt, 'raw': raw}
     data = get_data(pars, save_data=True)
     plot_sample(data)
+
+    plt.figure()
+    for k in data['key'].unique()[:2]:
+        data_k = data.loc[data['key'] == k]
+        r =  data_k['occupied'] / (data_k['occupied'].values + data_k['available'].values )
+        r.index = data_k['time']
+        r.plot()
+    plt.show()
